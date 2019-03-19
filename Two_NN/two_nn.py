@@ -95,11 +95,11 @@ def training(X, targs, epochs = 2000):
     model.compile(optimizer=optimizer,   
                   loss='mean_squared_error',
                   metrics=['mean_squared_error', 'mean_absolute_error'])
-    history = model.fit(X, [targs[:,i] for i in range(len(b_ind))], epochs=epochs, batch_size=60)
+    history = model.fit(X, [targs[:,i] for i in range(targs.shape[1])], epochs=epochs, batch_size=60)
     return model, history
 
 def relearn(X, targs, model, epochs = 2000):
-    history = model.fit(X, [targs[:,i] for i in range(len(b_ind))], epochs=epochs, batch_size=60)
+    history = model.fit(X, [targs[:,i] for i in range(targs.shape[1])], epochs=epochs, batch_size=60)
     return model, history
 
 def get_layers(model):
@@ -113,30 +113,18 @@ def get_layers(model):
 
     return Hidden_Layers, Output_Layers
 
-def save_tf_model(model, fanme):
-    model_json = model.to_json()
-    with open(fname[0], "w") as json_file:
-        json_file.write(model_json)
-    model.save_weights(fname[1])
+def save_tf_model(model, fname):
+    model.save(fname)
 
-def load_tf_Model(jsonStr, weightStr):
-    json_file = open(jsonStr, 'r')
-    loaded_nnet = json_file.read()
-    json_file.close()
-
-    serve_model = tf.keras.models.model_from_json(loaded_nnet)
-    serve_model.load_weights(weightStr)
-
-    serve_model.compile(optimizer=tf.train.AdamOptimizer(),
-                        loss='categorical_crossentropy',
-                        metrics=['accuracy'])
-    return serve_model
+def load_tf_Model(fname):
+    model  = tf.keras.models.load_model(fname)
+    return model
 
 def save_np_model(fname, Hidden_Layers, Output_Layers):
     np.savez(fname, Hidden_Layers = Hidden_Layers, Output_Layers = Output_Layers)
 
 def load_np_model(fname):
-    f = np.load(fanme)
+    f = np.load(fname)
     Hidden_Layers=f.f.Hidden_Layers 
     Output_Layers=f.f.Output_Layers
     return Hidden_Layers, Output_Layers
@@ -144,20 +132,12 @@ def load_np_model(fname):
 
 class Two_NN(object):
     def __init__(self,
-                X             = None,
-                targs         = None,
                 tf_model      = None,
                 tf_model_file = None,
                 np_model_file = None,
                 Hidden_Layers = None,
                 Output_Layers = None,
-                iterations    = 2000,
                 ):
-        if X             is not None:
-            self.X             = X
-
-        if targs         is not None:
-            self.targs         = targs
 
         if tf_model_file is not None:
             self.tf_model_file = tf_model_file
@@ -175,21 +155,24 @@ class Two_NN(object):
         if (Hidden_Layers is not None) & (Output_Layers is not None):
             self.Hidden_Layers = Hidden_Layers 
             self.Output_Layers = Output_Layers 
-
-        self.iterations = iterations
     
-    def train(self, tf_fname = ("model.json", "model.h5"), save_tf_model = False):
-        if (self.X is not None) & (self.targs is not None):
-            self.tf_model, self.history = training(self.X, self.targs, epochs = self.iterations)
+    def train(self, X, targs, iterations = 2000, tf_fname = ("model.json", "model.h5"), save_tf_model = False):
+        #self.X, self.targs = X, targs 
+        #self.iterations = iterations
+        if (X is not None) & (targs is not None):
+            self.tf_model, self.history = training(X, targs, epochs = iterations)
             self.Hidden_Layers, self.Output_Layers = get_layers(self.tf_model)
             if save_tf_model:
                 save_tf_model(model, tf_fname)
         else:
             raise IOError('X and targs need to have values')
 
-    def relearn(self, X, targs, tf_model, iterations = 2000):
-        self.tf_model, self.history = relearn(X, targs, model, epochs = iterations)
-        self.Hidden_Layers, self.Output_Layers = get_layers(self.tf_model)
+    def relearn(self, X, targs, iterations = 2000):
+        if hasattr(self, 'tf_model'):
+            self.tf_model, self.history = relearn(X, targs, self.tf_model, epochs = iterations)
+            self.Hidden_Layers, self.Output_Layers = get_layers(self.tf_model)
+        else:
+            raise NameError('No tf model to relearn.')
 
     def predict(self, x, cal_jac = False):
         if hasattr(self, 'Hidden_Layers') and hasattr(self, 'Output_Layers'):
@@ -199,16 +182,19 @@ class Two_NN(object):
             raise NameError('Hidden_Layers and Output_Layers have not yet been defined, and please try to train or load a model first.')
         return rets
 
-    def save_tf_model(self, fname, tf_model):
-        '''
-        fname: tuple of strs, like: ('model.json', 'model.h5')
-        '''
-        save_tf_model(tf_model, fanme)
-        self.tf_model_file = fname
+    def save_tf_model(self, fname):
+        if hasattr(self, 'tf_model'):
+            save_tf_model(self.tf_model, fname)
+            self.tf_model_file = fname
 
-    def save_np_model(self, fname, Hidden_Layers, Output_Layers):
-        np.savez(fname, Hidden_Layers = Hidden_Layers, Output_Layers = Output_Layers)
-        self.np_model_file = fname
+        else:
+            raise NameError('No tf model to save.')
+    def save_np_model(self, fname):
+        if hasattr(self, 'Hidden_Layers') and hasattr(self, 'Output_Layers'):
+            np.savez(fname, Hidden_Layers = self.Hidden_Layers, Output_Layers = self.Output_Layers)
+            self.np_model_file = fname
+        else:
+            raise NameError('Hidden_Layers and Output_Layers have not yet been defined, and please try to train or load a model first.')
 
 if __name__ == '__main__' :
     f = np.load('/home/ucfafyi/DATA/Prosail/prosail_2NN.npz')
