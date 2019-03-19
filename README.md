@@ -4,7 +4,7 @@
 ### ucfafyi@ucl.ac.uk
 
 
-This is a tow hidden layers neural net for preditions with jacobians.
+This is a two hidden layers neural net for preditions with jacobians.
 
 ## Installation:
 
