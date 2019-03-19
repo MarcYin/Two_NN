@@ -11,7 +11,7 @@ This is a two hidden layers neural net for preditions with jacobians.
 1. Directly from github 
 
 ```bash
-
+pip install https://github.com/MarcYin/Two_NN/archive/master.zip
 ```
 
 2. Using PyPI
