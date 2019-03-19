@@ -3,15 +3,15 @@ from setuptools import setup
 file_path = os.path.dirname(os.path.realpath(__file__))
 
 try:
-    version = os.environ['2NN_VERSION']
+    version = os.environ['Two_NN_VERSION']
 except:
-    version_file = open(os.path.join(file_path, '2NN/VERSION'), 'rb')
+    version_file = open(os.path.join(file_path, 'Two_NN/VERSION'), 'rb')
     version = version_file.read().decode().strip()
 
 with open('README.md', 'rb') as f:
     readme = f.read().decode()
 
-setup(name                          = '2NN',
+setup(name                          = 'Two_NN',
       version                       = version,
       description                   = 'Two layers Neural net with predited jacobian',
       long_description              = readme,
