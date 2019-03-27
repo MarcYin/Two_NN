@@ -83,7 +83,7 @@ def forward_backward(x, Hidden_Layers, Output_Layers, cal_jac=False):
         rets.append(ret)
     return rets
 
-def training(X, targs, nodes = 64, epochs = 2000):
+def training(X, targs, nodes = 64, epochs = 2000, batch_size=60):
     inputs = layers.Input(shape=(X.shape[1],))    
     x = layers.Dense(nodes, activation='relu')(inputs)
     x = layers.Dense(nodes, activation='relu')(x)
@@ -95,11 +95,11 @@ def training(X, targs, nodes = 64, epochs = 2000):
     model.compile(optimizer=optimizer,   
                   loss='mean_squared_error',
                   metrics=['mean_squared_error', 'mean_absolute_error'])
-    history = model.fit(X, [targs[:,i] for i in range(targs.shape[1])], epochs=epochs, batch_size=60)
+    history = model.fit(X, [targs[:,i] for i in range(targs.shape[1])], epochs=epochs, batch_size=batch_size)
     return model, history
 
-def relearn(X, targs, model, epochs = 2000):
-    history = model.fit(X, [targs[:,i] for i in range(targs.shape[1])], epochs=epochs, batch_size=60)
+def relearn(X, targs, model, epochs = 2000, batch_size=60):
+    history = model.fit(X, [targs[:,i] for i in range(targs.shape[1])], epochs=epochs, batch_size=batch_size)
     return model, history
 
 def get_layers(model):
@@ -156,20 +156,20 @@ class Two_NN(object):
             self.Hidden_Layers = Hidden_Layers 
             self.Output_Layers = Output_Layers 
     
-    def train(self, X, targs, nodes = 64, iterations = 2000, tf_fname = ("model.json", "model.h5"), save_tf_model = False):
+    def train(self, X, targs, nodes = 64, iterations = 2000, batch_size=60, tf_fname = "model.h5", save_tf_model = False):
         #self.X, self.targs = X, targs 
         #self.iterations = iterations
         if (X is not None) & (targs is not None):
-            self.tf_model, self.history = training(X, targs, nodes = nodes, epochs = iterations)
+            self.tf_model, self.history = training(X, targs, nodes = nodes, epochs = iterations, batch_size=batch_size)
             self.Hidden_Layers, self.Output_Layers = get_layers(self.tf_model)
             if save_tf_model:
                 save_tf_model(model, tf_fname)
         else:
             raise IOError('X and targs need to have values')
 
-    def relearn(self, X, targs, iterations = 2000):
+    def relearn(self, X, targs, iterations = 2000, batch_size=60):
         if hasattr(self, 'tf_model'):
-            self.tf_model, self.history = relearn(X, targs, self.tf_model, epochs = iterations)
+            self.tf_model, self.history = relearn(X, targs, self.tf_model, epochs = iterations, batch_size=batch_size)
             self.Hidden_Layers, self.Output_Layers = get_layers(self.tf_model)
         else:
             raise NameError('No tf model to relearn.')
