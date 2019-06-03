@@ -1,11 +1,6 @@
 import numpy as np
 from numba import jit
 from numba import jit
-import tensorflow as tf              
-from tensorflow import keras         
-from tensorflow.keras import layers 
-
-
 # the forward and backpropogation 
 # are from https://medium.com/unit8-machine-learning-publication/computing-the-jacobian-matrix-of-a-neural-network-in-python-4f162e5db180
 # but added jit for faster speed in the calculation
@@ -58,6 +53,13 @@ def relu_backward(dout, cache):
     x = cache
     dx = dout * np.where(x > 0, np.ones(x.shape).astype(np.float32), np.zeros(x.shape).astype(np.float32))
     return dx
+
+@jit(nopython=True)
+def sigmod_forward(x):
+    """ Forward sigmod
+    """
+    out = 1 / (1 + np.exp(-1*x))
+    return out
 
 def forward_backward(x, Hidden_Layers, Output_Layers, cal_jac=False): 
     layer_to_cache = dict()  # for each layer, we store the cache needed for backward pass 
@@ -140,11 +142,24 @@ class Two_NN(object):
                 ):
 
         if tf_model_file is not None:
+            try:
+                import tensorflow as tf              
+                from tensorflow import keras         
+                from tensorflow.keras import layers 
+            except ImportError:
+                raise ImportError('To use a tensorflow model, you need to install tensorflow and keras.')
             self.tf_model_file = tf_model_file
             self.tf_model = load_tf_Model(self.tf_model_file)
             self.Hidden_Layers, self.Output_Layers = get_layers(self.tf_model)
 
         if tf_model      is not None:
+            try:
+                import tensorflow as tf              
+                from tensorflow import keras         
+                from tensorflow.keras import layers 
+            except ImportError:
+                raise ImportError('To use a tensorflow model, you need to install tensorflow and keras.')
+            
             self.tf_model      = tf_model
             self.Hidden_Layers, self.Output_Layers = get_layers(self.tf_model)
        
@@ -159,6 +174,13 @@ class Two_NN(object):
     def train(self, X, targs, nodes = 64, iterations = 2000, batch_size=60, tf_fname = "model.h5", save_tf_model = False):
         #self.X, self.targs = X, targs 
         #self.iterations = iterations
+        try:
+            import tensorflow as tf              
+            from tensorflow import keras         
+            from tensorflow.keras import layers 
+        except ImportError:
+            raise ImportError('To train a nueral network, you need to install tensorflow and keras.')
+            
         if (X is not None) & (targs is not None):
             self.tf_model, self.history = training(X, targs, nodes = nodes, epochs = iterations, batch_size=batch_size)
             self.Hidden_Layers, self.Output_Layers = get_layers(self.tf_model)
@@ -168,6 +190,12 @@ class Two_NN(object):
             raise IOError('X and targs need to have values')
 
     def relearn(self, X, targs, iterations = 2000, batch_size=60):
+        try:
+            import tensorflow as tf              
+            from tensorflow import keras         
+            from tensorflow.keras import layers 
+        except ImportError:
+            raise ImportError('To train a nueral network, you need to install tensorflow and keras.')
         if hasattr(self, 'tf_model'):
             self.tf_model, self.history = relearn(X, targs, self.tf_model, epochs = iterations, batch_size=batch_size)
             self.Hidden_Layers, self.Output_Layers = get_layers(self.tf_model)
