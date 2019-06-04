@@ -86,6 +86,12 @@ def forward_backward(x, Hidden_Layers, Output_Layers, cal_jac=False):
     return rets
 
 def training(X, targs, nodes = 64, epochs = 2000, batch_size=60):
+    try:
+        import tensorflow as tf              
+        from tensorflow import keras         
+        from tensorflow.keras import layers 
+    except ImportError:
+        raise ImportError('To train a nueral network, you need to install tensorflow and keras.')
     inputs = layers.Input(shape=(X.shape[1],))    
     x = layers.Dense(nodes, activation='relu')(inputs)
     x = layers.Dense(nodes, activation='relu')(x)
@@ -96,11 +102,17 @@ def training(X, targs, nodes = 64, epochs = 2000, batch_size=60):
     optimizer = tf.keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
     model.compile(optimizer=optimizer,   
                   loss='mean_squared_error',
-                  metrics=['mean_squared_error', 'mean_absolute_error'])
+                  metrics=['mean_absolute_error'])
     history = model.fit(X, [targs[:,i] for i in range(targs.shape[1])], epochs=epochs, batch_size=batch_size)
     return model, history
 
 def relearn(X, targs, model, epochs = 2000, batch_size=60):
+    try:
+        import tensorflow as tf              
+        from tensorflow import keras         
+        from tensorflow.keras import layers 
+    except ImportError:
+        raise ImportError('To train a nueral network, you need to install tensorflow and keras.')
     history = model.fit(X, [targs[:,i] for i in range(targs.shape[1])], epochs=epochs, batch_size=batch_size)
     return model, history
 
@@ -112,23 +124,40 @@ def get_layers(model):
     for layer in model.layers[3:]:
         l3 = layer.get_weights()
         Output_Layers.append(l3)
-
     return Hidden_Layers, Output_Layers
 
 def save_tf_model(model, fname):
+    try:
+        import tensorflow as tf              
+        from tensorflow import keras         
+        from tensorflow.keras import layers 
+    except ImportError:
+        raise ImportError('To use a tensorflow model, you need to install tensorflow and keras.')
     model.save(fname)
 
 def load_tf_Model(fname):
+    try:
+        import tensorflow as tf              
+        from tensorflow import keras         
+        from tensorflow.keras import layers 
+    except ImportError:
+        raise ImportError('To use a tensorflow model, you need to install tensorflow and keras.')
     model  = tf.keras.models.load_model(fname)
     return model
 
 def save_np_model(fname, Hidden_Layers, Output_Layers):
+    Hidden_Layers[0][1] = np.atleast_2d(Hidden_Layers[0][1]).astype(np.float32)
+    Hidden_Layers[1][1] = np.atleast_2d(Hidden_Layers[1][1]).astype(np.float32)
+    Output_Layers[0][1] = np.atleast_2d(Output_Layers[0][1]).astype(np.float32)
     np.savez(fname, Hidden_Layers = Hidden_Layers, Output_Layers = Output_Layers)
 
 def load_np_model(fname):
     f = np.load(fname,  allow_pickle=True)
-    Hidden_Layers=f.f.Hidden_Layers 
-    Output_Layers=f.f.Output_Layers
+    Hidden_Layers=f.f.Hidden_Layers.tolist() 
+    Output_Layers=f.f.Output_Layers.tolist()
+    Hidden_Layers[0][1] = (Hidden_Layers[0][1]).ravel().astype(np.float32)
+    Hidden_Layers[1][1] = (Hidden_Layers[1][1]).ravel().astype(np.float32)
+    Output_Layers[0][1] = (Output_Layers[0][1]).ravel().astype(np.float32)
     return Hidden_Layers, Output_Layers
 
 
@@ -142,24 +171,11 @@ class Two_NN(object):
                 ):
 
         if tf_model_file is not None:
-            try:
-                import tensorflow as tf              
-                from tensorflow import keras         
-                from tensorflow.keras import layers 
-            except ImportError:
-                raise ImportError('To use a tensorflow model, you need to install tensorflow and keras.')
             self.tf_model_file = tf_model_file
             self.tf_model = load_tf_Model(self.tf_model_file)
             self.Hidden_Layers, self.Output_Layers = get_layers(self.tf_model)
 
         if tf_model      is not None:
-            try:
-                import tensorflow as tf              
-                from tensorflow import keras         
-                from tensorflow.keras import layers 
-            except ImportError:
-                raise ImportError('To use a tensorflow model, you need to install tensorflow and keras.')
-            
             self.tf_model      = tf_model
             self.Hidden_Layers, self.Output_Layers = get_layers(self.tf_model)
        
@@ -172,15 +188,6 @@ class Two_NN(object):
             self.Output_Layers = Output_Layers 
     
     def train(self, X, targs, nodes = 64, iterations = 2000, batch_size=60, tf_fname = "model.h5", save_tf_model = False):
-        #self.X, self.targs = X, targs 
-        #self.iterations = iterations
-        try:
-            import tensorflow as tf              
-            from tensorflow import keras         
-            from tensorflow.keras import layers 
-        except ImportError:
-            raise ImportError('To train a nueral network, you need to install tensorflow and keras.')
-            
         if (X is not None) & (targs is not None):
             self.tf_model, self.history = training(X, targs, nodes = nodes, epochs = iterations, batch_size=batch_size)
             self.Hidden_Layers, self.Output_Layers = get_layers(self.tf_model)
@@ -190,12 +197,6 @@ class Two_NN(object):
             raise IOError('X and targs need to have values')
 
     def relearn(self, X, targs, iterations = 2000, batch_size=60):
-        try:
-            import tensorflow as tf              
-            from tensorflow import keras         
-            from tensorflow.keras import layers 
-        except ImportError:
-            raise ImportError('To train a nueral network, you need to install tensorflow and keras.')
         if hasattr(self, 'tf_model'):
             self.tf_model, self.history = relearn(X, targs, self.tf_model, epochs = iterations, batch_size=batch_size)
             self.Hidden_Layers, self.Output_Layers = get_layers(self.tf_model)
@@ -214,12 +215,11 @@ class Two_NN(object):
         if hasattr(self, 'tf_model'):
             save_tf_model(self.tf_model, fname)
             self.tf_model_file = fname
-
         else:
             raise NameError('No tf model to save.')
     def save_np_model(self, fname):
         if hasattr(self, 'Hidden_Layers') and hasattr(self, 'Output_Layers'):
-            np.savez(fname, Hidden_Layers = self.Hidden_Layers, Output_Layers = self.Output_Layers)
+            save_np_model(fname, self.Hidden_Layers, self.Output_Layers)
             self.np_model_file = fname
         else:
             raise NameError('Hidden_Layers and Output_Layers have not yet been defined, and please try to train or load a model first.')
